@@ -1,0 +1,143 @@
+Direccionamiento IP
+
+Enlaces entre routers (WAN)
+
+| Dispositivo | Interfaz | IP             | Máscara         | Conectado a |
+| ----------- | -------- | -------------- | --------------- | ----------- |
+| R1          | Gi0/1    | 192.168.100.1  | 255.255.255.252 | R2          |
+| R2          | Gi0/1    | 192.168.100.2  | 255.255.255.252 | R1          |
+| R2          | Se0/0/0  | 192.168.100.10 | 255.255.255.252 | R4          |
+| R4          | Se0/0/0  | 192.168.100.9  | 255.255.255.252 | R2          |
+| R2          | Se0/0/1  | 192.168.100.6  | 255.255.255.252 | R3          |
+| R3          | Se0/0/0  | 192.168.100.5  | 255.255.255.252 | R2          |
+
+---
+
+VLANs (HSRP)
+
+| VLAN | Red             | Gateway      | R1           | R4           |
+| ---- | --------------- | ------------ | ------------ | ------------ |
+| 300  | 192.168.30.0/24 | 192.168.30.1 | 192.168.30.2 | 192.168.30.3 |
+| 500  | 192.168.50.0/24 | 192.168.50.1 | 192.168.50.2 | 192.168.50.3 |
+| 999  | 192.168.99.0/24 | 192.168.99.1 | 192.168.99.2 | 192.168.99.3 |
+
+Nota: R4 es el activo (priority 110) y R1 es standby (priority 90).
+
+---
+Red de servidores
+
+| Dispositivo | Interfaz | IP           |
+| ----------- | -------- | ------------ |
+| R3          | Gi0/0    | 192.168.32.1 |
+| SW3         | VLAN 32  | 192.168.32.2 |
+
+---
+
+Switches (administración)
+
+| Switch | VLAN | IP           | Gateway      |
+| ------ | ---- | ------------ | ------------ |
+| SW1    | 999  | 192.168.99.4 | 192.168.99.1 |
+| SW2    | 999  | 192.168.99.5 | 192.168.99.1 |
+| SW3    | 32   | 192.168.32.2 | 192.168.32.1 |
+
+---
+
+Explicación de los comandos
+
+Configuración básica
+
+* `hostname`: cambia el nombre del equipo
+* `ip domain-name`: necesario para generar claves SSH
+* `username`: crea usuarios locales
+* `line vty`: acceso remoto
+* `login local`: usa los usuarios creados
+* `transport input ssh`: solo permite SSH
+
+---
+
+Subinterfaces (Router-on-a-Stick)
+
+* `interface gi0/0.300`: crea subinterfaz
+* `encapsulation dot1q 300`: asigna VLAN
+* `ip address`: IP del gateway real
+
+Esto permite que un router maneje varias VLANs.
+
+---
+
+DHCP Relay
+
+* `ip helper-address 192.168.100.10`
+
+Envía las solicitudes DHCP al servidor (R2).
+Sin esto, los clientes no reciben IP.
+
+---
+
+HSRP
+
+* `standby X ip`: gateway virtual
+* `standby priority`: define el activo
+* `preempt`: recupera el rol si vuelve
+
+R4 tiene mayor prioridad, por eso es el gateway principal.
+
+---
+
+Rutas estáticas
+
+* `ip route red mascara siguiente-salto`
+
+Sirve para alcanzar otras redes.
+
+* `0.0.0.0 0.0.0.0`: ruta por defecto
+
+---
+
+DHCP (R2)
+
+* `ip dhcp pool`: crea pool
+* `network`: red a asignar
+* `default-router`: gateway
+* `dns-server`: DNS
+* `excluded-address`: evita asignar IPs reservadas
+
+---
+VLANs (Switch)
+
+* `vlan X`: crea VLAN
+* `name`: nombre
+
+---
+
+Trunk
+
+* `switchport mode trunk`: habilita trunk
+* `switchport trunk allowed vlan`: VLANs permitidas
+* `native vlan`: VLAN sin etiqueta
+
+---
+
+EtherChannel
+
+* `channel-group 1 mode active`: LACP
+
+Une varios enlaces en uno lógico.
+
+---
+
+STP
+
+* `spanning-tree vlan X root primary`
+
+Define el switch principal para evitar loops.
+
+---
+
+PortFast
+
+* `spanning-tree portfast`
+
+Hace que el puerto levante rápido (para PCs).
+
